@@ -398,7 +398,8 @@ function renderList() {
     const avg = calcAvg(r.scores);
     const vLabel = {remove:'Убираем', develop:'Развиваем', support:'Поддерживающее обучение'}[r.verdict] || 'Не выбрано';
     const vClass = r.verdict ? 'badge-' + r.verdict : 'badge-draft';
-    return `<div class="manager-card" onclick="showDetail('${r.id}')">
+    const safeId = String(r.id);
+    return `<div class="manager-card" onclick="showDetail('${safeId}')">
       <div>
         <div class="mc-name">${r.name || 'Без имени'}</div>
         <div class="mc-meta">${ROLES[r.role]?.label || r.role} · ${r.concept || '—'} · ${r.address || '—'}</div>
@@ -433,7 +434,7 @@ function startNew() {
 }
 
 function editRecord(id) {
-  const r = records.find(x => x.id === id);
+  const r = records.find(x => String(x.id) === String(id));
   if (!r) return;
   currentId = id;
   currentVerdict = r.verdict || null;
@@ -551,7 +552,7 @@ async function saveRecord() {
     updatedAt: new Date().toISOString()
   };
   if (currentId) {
-    const idx = records.findIndex(r => r.id === currentId);
+    const idx = records.findIndex(r => String(r.id) === String(currentId));
     if (idx >= 0) records[idx] = record; else records.push(record);
   } else {
     records.push(record);
@@ -572,7 +573,7 @@ async function saveRecord() {
 
 // ── Detail ─────────────────────────────────────────────────────────────────
 function showDetail(id) {
-  const r = records.find(x => x.id === id);
+  const r = records.find(x => String(x.id) === String(id));
   if (!r) return;
   const role = ROLES[r.role] || {};
   const blocks = role.blocks || [];
@@ -620,7 +621,7 @@ function showDetail(id) {
 }
 
 function confirmDelete(id) {
-  const r = records.find(x => x.id === id);
+  const r = records.find(x => String(x.id) === String(id));
   if (!confirm(`Удалить оценку «${r?.name}»?`)) return;
   records = records.filter(x => x.id !== id);
   deleteFromSheets(id);
