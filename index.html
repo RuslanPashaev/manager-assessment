@@ -214,13 +214,23 @@ textarea { min-height: 72px; resize: vertical; }
         </div>
       </div>
 
-      <!-- Scores -->
+      <!-- Hard skills -->
       <div class="form-section">
-        <div class="form-section-title">Оценка компетенций <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-hint)">(нажми на блок — увидишь вопросы)</span></div>
+        <div class="form-section-title">Харды — операционные компетенции <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-hint)">(нажми на блок — вопросы)</span></div>
         <div id="score-blocks"></div>
         <div class="avg-row" id="avg-row" style="display:none">
           <div class="avg-num" id="avg-num">—</div>
-          <div><div class="avg-label">Средний балл</div><div class="avg-rec" id="avg-rec"></div></div>
+          <div><div class="avg-label">Средний балл харды</div><div class="avg-rec" id="avg-rec"></div></div>
+        </div>
+      </div>
+
+      <!-- Soft skills -->
+      <div class="form-section">
+        <div class="form-section-title">Софты — личностные компетенции <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-hint)">(нажми на блок — вопросы)</span></div>
+        <div id="soft-blocks"></div>
+        <div class="avg-row" id="soft-avg-row" style="display:none">
+          <div class="avg-num" id="soft-avg-num">—</div>
+          <div><div class="avg-label">Средний балл софты</div><div class="avg-rec" id="soft-avg-rec"></div></div>
         </div>
       </div>
 
@@ -303,6 +313,7 @@ textarea { min-height: 72px; resize: vertical; }
 let records = [];
 let currentId = null;
 let currentScores = {};
+let currentSoftScores = {};
 let currentVerdict = null;
 let scriptUrl = localStorage.getItem('pbo_script_url') || '';
 
@@ -396,6 +407,7 @@ function renderList() {
   const sorted = [...records].sort((a,b) => new Date(b.date) - new Date(a.date));
   el.innerHTML = `<div class="manager-grid">${sorted.map(r => {
     const avg = calcAvg(r.scores);
+    const softAvg = calcAvg(r.softScores);
     const vLabel = {remove:'Убираем', develop:'Развиваем', support:'Поддерживающее обучение'}[r.verdict] || 'Не выбрано';
     const vClass = r.verdict ? 'badge-' + r.verdict : 'badge-draft';
     const safeId = String(r.id);
@@ -407,7 +419,7 @@ function renderList() {
       </div>
       <div class="mc-right">
         <span class="badge ${vClass}">${vLabel}</span>
-        ${avg !== null ? `<span class="avg-pill">${avg.toFixed(1)} ср. балл</span>` : ''}
+        ${avg !== null ? `<span class="avg-pill">Х: ${avg.toFixed(1)}</span>` : ''}${softAvg !== null ? `<span class="avg-pill">С: ${softAvg.toFixed(1)}</span>` : ''}
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -439,6 +451,7 @@ function editRecord(id) {
   currentId = id;
   currentVerdict = r.verdict || null;
   currentScores = {...(r.scores || {})};
+  currentSoftScores = {...(r.softScores || {})};
   document.getElementById('f-name').value = r.name || '';
   document.getElementById('f-role').value = r.role || 'cs';
   document.getElementById('f-concept').value = r.concept || '';
@@ -454,15 +467,13 @@ function editRecord(id) {
   showPage('form');
 }
 
-function clearScores() { currentScores = {}; }
+function clearScores() { currentScores = {}; currentSoftScores = {}; }
 
-function renderScoreBlocks() {
-  const role = document.getElementById('f-role').value;
-  const blocks = ROLES[role]?.blocks || [];
-  const container = document.getElementById('score-blocks');
+function buildBlocks(blocks, scores, prefix, containerId, avgRowId, avgNumId, avgRecId) {
+  const container = document.getElementById(containerId);
   container.innerHTML = blocks.map((b, i) => {
-    const key = 'b' + i;
-    const cur = currentScores[key];
+    const key = prefix + i;
+    const cur = scores[key];
     const qHtml = b.qs.map(q => `
       <div class="q-item">
         <div class="q-tag">${q.tag}</div>
@@ -475,41 +486,46 @@ function renderScoreBlocks() {
         <div>
           <div class="score-block-title">${b.title}</div>
           <div class="q-accordion">
-            <button class="q-toggle" onclick="toggleQ(${i})">Показать вопросы</button>
-            <div class="q-list" id="ql-${i}">${qHtml}</div>
+            <button class="q-toggle" onclick="toggleQ('${prefix}${i}')">Показать вопросы</button>
+            <div class="q-list" id="ql-${prefix}${i}">${qHtml}</div>
           </div>
         </div>
         <div class="score-btns">
-          ${[0,1,2,3,4].map(s => `<button class="score-btn ${cur===s?'sel-'+s:''}" onclick="setScore('${key}',${s})">${s}</button>`).join('')}
+          ${[0,1,2,3,4].map(s => `<button class="score-btn ${cur===s?'sel-'+s:''}" onclick="setScore('${key}','${prefix}',${s})">${s}</button>`).join('')}
         </div>
       </div>
     </div>`;
   }).join('');
-  updateAvg();
+  const vals = Object.values(scores).filter(v => v !== undefined);
+  const row = document.getElementById(avgRowId);
+  if (!vals.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+  document.getElementById(avgNumId).textContent = avg.toFixed(1);
+  const rec = avg >= 3.5 ? 'Поддерживающее обучение' : avg >= 2.5 ? 'Развиваем точечно' : avg >= 1.5 ? 'Развиваем' : 'Убираем';
+  document.getElementById(avgRecId).textContent = rec;
 }
 
-function toggleQ(i) {
-  const el = document.getElementById('ql-' + i);
+function renderScoreBlocks() {
+  const role = document.getElementById('f-role').value;
+  buildBlocks(ROLES[role]?.blocks || [], currentScores, 'b', 'score-blocks', 'avg-row', 'avg-num', 'avg-rec');
+  buildBlocks(SOFT_BLOCKS, currentSoftScores, 's', 'soft-blocks', 'soft-avg-row', 'soft-avg-num', 'soft-avg-rec');
+}
+
+function toggleQ(id) {
+  const el = document.getElementById('ql-' + id);
   const btn = el.previousElementSibling;
   const open = el.classList.toggle('open');
   btn.textContent = open ? 'Скрыть вопросы' : 'Показать вопросы';
 }
 
-function setScore(key, val) {
-  currentScores[key] = val;
+function setScore(key, prefix, val) {
+  if (prefix === 's') currentSoftScores[key] = val;
+  else currentScores[key] = val;
   renderScoreBlocks();
 }
 
-function updateAvg() {
-  const vals = Object.values(currentScores).filter(v => v !== undefined);
-  const row = document.getElementById('avg-row');
-  if (!vals.length) { row.style.display = 'none'; return; }
-  row.style.display = 'flex';
-  const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
-  document.getElementById('avg-num').textContent = avg.toFixed(1);
-  const rec = avg >= 3.5 ? 'Поддерживающее обучение' : avg >= 2.5 ? 'Развиваем точечно' : avg >= 1.5 ? 'Развиваем' : 'Убираем';
-  document.getElementById('avg-rec').textContent = rec;
-}
+function updateAvg() {}
 
 function calcAvg(scores) {
   if (!scores) return null;
@@ -545,6 +561,7 @@ async function saveRecord() {
     tenure: document.getElementById('f-tenure').value.trim(),
     date: document.getElementById('f-date').value,
     scores: {...currentScores},
+    softScores: {...currentSoftScores},
     strengths: document.getElementById('f-strengths').value.trim(),
     gaps: document.getElementById('f-gaps').value.trim(),
     context: document.getElementById('f-context').value.trim(),
@@ -586,6 +603,12 @@ function showDetail(id) {
     const cl = s !== undefined ? 'sd-'+s : 'sd-na';
     return `<div class="detail-score-row"><span>${b.title}</span><div class="score-dot ${cl}">${s !== undefined ? s : '—'}</div></div>`;
   }).join('');
+  const softHtml = SOFT_BLOCKS.map((b, i) => {
+    const s = r.softScores?.['s'+i];
+    const cl = s !== undefined ? 'sd-'+s : 'sd-na';
+    return `<div class="detail-score-row"><span>${b.title}</span><div class="score-dot ${cl}">${s !== undefined ? s : '—'}</div></div>`;
+  }).join('');
+  const softAvgDetail = calcAvg(r.softScores);
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-header">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
@@ -596,14 +619,16 @@ function showDetail(id) {
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <span class="badge ${vClass}">${vLabel}</span>
-          ${avg !== null ? `<span style="font-size:20px;font-weight:700">${avg.toFixed(1)}</span>` : ''}
+          ${avg !== null ? `<span style="font-size:13px;color:var(--text-muted)">Х:</span><span style="font-size:20px;font-weight:700">${avg.toFixed(1)}</span>` : ''}
+          ${softAvgDetail !== null ? `<span style="font-size:13px;color:var(--text-muted)">С:</span><span style="font-size:20px;font-weight:700">${softAvgDetail.toFixed(1)}</span>` : ''}
         </div>
       </div>
     </div>
     <div class="detail-grid">
       <div class="detail-card">
-        <div class="detail-card-label">Баллы по блокам</div>
+        <div class="detail-card-label">Харды — операционные</div>
         ${scoresHtml || '<div style="color:var(--text-muted);font-size:13px">Не заполнено</div>'}
+        ${softHtml ? `<div class="detail-card-label" style="margin-top:14px">Софты — личностные ${softAvgDetail !== null ? '· ' + softAvgDetail.toFixed(1) : ''}</div>${softHtml}` : ''}
       </div>
       <div class="detail-card">
         <div class="detail-card-label">Сильные стороны</div>
