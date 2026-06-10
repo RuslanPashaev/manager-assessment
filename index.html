@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Оценка менеджеров — ПБО</title>
+<style>
+:root {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --border: #e4e2db;
+  --border-strong: #c8c5bc;
+  --text: #1a1a18;
+  --text-muted: #6b6960;
+  --text-hint: #9e9b93;
+  --accent: #2563eb;
+  --accent-bg: #eff6ff;
+  --accent-border: #bfdbfe;
+  --green: #16a34a;
+  --green-bg: #f0fdf4;
+  --green-border: #bbf7d0;
+  --amber: #b45309;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+
+/* Layout */
+.app { max-width: 900px; margin: 0 auto; padding: 0 16px 60px; }
+header { padding: 24px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.header-left h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+.header-left p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text); transition: background 0.12s, border-color 0.12s; text-decoration: none; }
+.btn:hover { background: var(--bg); border-color: var(--border-strong); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-danger { color: var(--red); border-color: var(--red-border); }
+.btn-danger:hover { background: var(--red-bg); }
+
+/* Pages */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Cards list */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-state h2 { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+.empty-state p { font-size: 14px; margin-bottom: 24px; }
+.manager-grid { display: grid; gap: 12px; }
+.manager-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
+.manager-card:hover { border-color: var(--accent-border); box-shadow: 0 2px 8px rgba(37,99,235,0.08); }
+.mc-name { font-weight: 600; font-size: 16px; }
+.mc-meta { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+.mc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.badge-remove { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.badge-develop { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.badge-support { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.badge-draft { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+.avg-pill { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+/* Form */
+.form-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.form-section { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.form-section:last-child { border-bottom: none; }
+.form-section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 16px; }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media(max-width: 600px) { .field-grid, .field-grid-3 { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+input[type=text], input[type=date], input[type=number], select, textarea {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); font-size: 14px; font-family: inherit;
+  transition: border-color 0.12s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { min-height: 72px; resize: vertical; }
+
+/* Score blocks */
+.score-block { margin-bottom: 2px; }
+.score-header { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.score-block:last-child .score-header { border-bottom: none; }
+.score-block-title { font-size: 14px; color: var(--text); }
+.score-btns { display: flex; gap: 4px; }
+.score-btn { width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); transition: all 0.1s; }
+.score-btn:hover { border-color: var(--border-strong); background: var(--surface); }
+.score-btn.sel-0 { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+.score-btn.sel-1 { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.score-btn.sel-2 { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.score-btn.sel-3 { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.score-btn.sel-4 { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
+
+/* Questions accordion */
+.q-accordion { margin-top: 8px; }
+.q-toggle { font-size: 12px; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; margin-top: 4px; }
+.q-list { display: none; margin-top: 10px; }
+.q-list.open { display: block; }
+.q-item { padding: 10px 14px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 6px; }
+.q-item:last-child { margin-bottom: 0; }
+.q-tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); margin-bottom: 5px; }
+.q-text { font-size: 13px; color: var(--text); margin-bottom: 6px; font-weight: 500; }
+.q-ok { font-size: 12px; color: var(--green); line-height: 1.5; margin-bottom: 2px; }
+.q-bad { font-size: 12px; color: var(--red); line-height: 1.5; }
+
+/* Verdict */
+.verdict-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.verdict-btn { padding: 9px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-muted); transition: all 0.12s; }
+.verdict-btn:hover { border-color: var(--border-strong); }
+.verdict-btn.sel-remove { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+.verdict-btn.sel-develop { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+.verdict-btn.sel-support { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+
+/* Avg display */
+.avg-row { display: flex; align-items: center; gap: 12px; padding: 14px 0; }
+.avg-num { font-size: 32px; font-weight: 700; color: var(--text); }
+.avg-label { font-size: 13px; color: var(--text-muted); }
+.avg-rec { font-size: 14px; font-weight: 500; margin-top: 2px; }
+
+/* Form actions */
+.form-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 20px 24px; background: var(--bg); border-top: 1px solid var(--border); }
+
+/* Detail view */
+.detail-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px; }
+.detail-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.detail-meta { font-size: 14px; color: var(--text-muted); }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media(max-width:600px){ .detail-grid { grid-template-columns: 1fr; } }
+.detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+.detail-card-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.detail-score-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.detail-score-row:last-child { border-bottom: none; }
+.score-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.sd-0 { background: var(--red-bg); color: var(--red); }
+.sd-1 { background: #fff7ed; color: #c2410c; }
+.sd-2 { background: var(--amber-bg); color: var(--amber); }
+.sd-3 { background: var(--green-bg); color: var(--green); }
+.sd-4 { background: var(--accent-bg); color: var(--accent); }
+.sd-na { background: var(--bg); color: var(--text-muted); }
+
+/* Status bar */
+.status-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 20px; font-size: 13px; font-weight: 500; text-align: center; transform: translateY(100%); transition: transform 0.2s; z-index: 100; }
+.status-bar.show { transform: translateY(0); }
+.status-bar.ok { background: var(--green); color: #fff; }
+.status-bar.err { background: var(--red); color: #fff; }
+.status-bar.loading { background: var(--accent); color: #fff; }
+
+/* Nav breadcrumb */
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 20px; }
+.breadcrumb a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: var(--text-muted); }
+
+/* Scale ref */
+.scale-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.scale-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.scale-table tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-left">
+      <h1>Оценка менеджеров</h1>
+      <p id="header-sub">ПБО · Coffee Story · Nutland</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="showSetup()" id="setup-btn">⚙ Настройка</button>
+      <button class="btn btn-primary" onclick="startNew()" id="new-btn">+ Новая оценка</button>
+    </div>
+  </header>
+
+  <!-- LIST PAGE -->
+  <div class="page active" id="page-list">
+    <div id="list-content"></div>
+  </div>
+
+  <!-- FORM PAGE -->
+  <div class="page" id="page-form">
+    <div class="breadcrumb">
+      <a onclick="goList()">← Все оценки</a>
+      <span>/</span>
+      <span id="form-breadcrumb-title">Новая оценка</span>
+    </div>
+    <div class="form-wrap">
+      <!-- Info -->
+      <div class="form-section">
+        <div class="form-section-title">Данные сотрудника</div>
+        <div class="field-grid" style="margin-bottom:14px">
+          <div class="field"><label>ФИО</label><input type="text" id="f-name" placeholder="Иванов Иван Иванович"/></div>
+          <div class="field"><label>Должность</label>
+            <select id="f-role">
+              <option value="cs">МС Coffee Story / Nutland</option>
+              <option value="pbo">МС ПБО (Маковский / Crispy)</option>
+              <option value="spbo">Ст. МС ПБО (Маковский / Crispy)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-grid" style="margin-bottom:14px">
+          <div class="field"><label>Концепция / точка</label><input type="text" id="f-concept" placeholder="Coffee Story"/></div>
+          <div class="field"><label>Адрес заведения</label><input type="text" id="f-address" placeholder="ул. Мира, 15"/></div>
+        </div>
+        <div class="field-grid">
+          <div class="field"><label>Стаж в компании</label><input type="text" id="f-tenure" placeholder="1 год 3 месяца"/></div>
+          <div class="field"><label>Дата оценки</label><input type="date" id="f-date"/></div>
+        </div>
+      </div>
+
+      <!-- Scores -->
+      <div class="form-section">
+        <div class="form-section-title">Оценка компетенций <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-hint)">(нажми на блок — увидишь вопросы)</span></div>
+        <div id="score-blocks"></div>
+        <div class="avg-row" id="avg-row" style="display:none">
+          <div class="avg-num" id="avg-num">—</div>
+          <div><div class="avg-label">Средний балл</div><div class="avg-rec" id="avg-rec"></div></div>
+        </div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="form-section">
+        <div class="form-section-title">Обратная связь</div>
+        <div class="field" style="margin-bottom:14px"><label>Сильные стороны</label><textarea id="f-strengths" placeholder="Что делает хорошо..."></textarea></div>
+        <div class="field" style="margin-bottom:14px"><label>Зоны развития</label><textarea id="f-gaps" placeholder="Что западает, где нужна работа..."></textarea></div>
+        <div class="field"><label>Контекст и наблюдения</label><textarea id="f-context" placeholder="Поведение во время интервью, стаж в роли, внешние обстоятельства..."></textarea></div>
+      </div>
+
+      <!-- Verdict -->
+      <div class="form-section">
+        <div class="form-section-title">Итоговое решение</div>
+        <div class="verdict-row">
+          <button class="verdict-btn" id="vb-remove" onclick="setVerdict('remove')">Убираем</button>
+          <button class="verdict-btn" id="vb-develop" onclick="setVerdict('develop')">Развиваем</button>
+          <button class="verdict-btn" id="vb-support" onclick="setVerdict('support')">Поддерживающее обучение</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveRecord()" id="save-btn">Сохранить оценку</button>
+        <button class="btn" onclick="goList()">Отмена</button>
+        <span id="save-status" style="font-size:13px;color:var(--text-muted)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DETAIL PAGE -->
+  <div class="page" id="page-detail">
+    <div class="breadcrumb">
+      <a onclick="goList()">← Все оценки</a>
+      <span>/</span>
+      <span id="detail-breadcrumb"></span>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- SETUP PAGE -->
+  <div class="page" id="page-setup">
+    <div class="breadcrumb">
+      <a onclick="goList()">← Все оценки</a>
+      <span>/</span>
+      <span>Настройка</span>
+    </div>
+    <div class="form-wrap">
+      <div class="form-section">
+        <div class="form-section-title">Подключение Google Sheets</div>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px">Вставь URL из Apps Script (Web app URL). Данные будут автоматически сохраняться в Google Таблицу и загружаться при открытии сайта.</p>
+        <div class="field" style="margin-bottom:16px">
+          <label>Apps Script Web App URL</label>
+          <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/..."/>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="saveSetup()">Сохранить</button>
+          <button class="btn" onclick="testConnection()">Проверить соединение</button>
+        </div>
+        <div id="setup-result" style="margin-top:12px;font-size:13px"></div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Шкала оценки</div>
+        <table class="scale-table">
+          <tr><td style="width:140px;font-weight:600;color:#2563eb">4 — Стратегический</td><td style="color:var(--text-muted)">Полный контроль, предвидит проблемы, самостоятелен в любых нештатных ситуациях</td></tr>
+          <tr><td style="font-weight:600;color:#16a34a">3 — Сильный</td><td style="color:var(--text-muted)">Уверенно ведёт смену, решает большинство нештатных ситуаций самостоятельно</td></tr>
+          <tr><td style="font-weight:600;color:#b45309">2 — Базовый</td><td style="color:var(--text-muted)">Выполняет стандартные обязанности, при сложных ситуациях привлекает руководителя</td></tr>
+          <tr><td style="font-weight:600;color:#c2410c">1 — Ограниченный</td><td style="color:var(--text-muted)">Частично выполняет обязанности, часто требует поддержки</td></tr>
+          <tr><td style="font-weight:600;color:#dc2626">0 — Негативный</td><td style="color:var(--text-muted)">Не справляется с базовыми обязанностями, требует постоянного контроля</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar" id="status-bar"></div>
+
+<script src="data.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let records = [];
+let currentId = null;
+let currentScores = {};
+let currentVerdict = null;
+let scriptUrl = localStorage.getItem('pbo_script_url') || '';
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('f-date').valueAsDate = new Date();
+  if (scriptUrl) loadFromSheets();
+  else renderList();
+  document.getElementById('f-role').addEventListener('change', () => {
+    clearScores();
+    renderScoreBlocks();
+  });
+});
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+}
+function goList() { showPage('list'); renderList(); }
+function showSetup() { showPage('setup'); document.getElementById('setup-url').value = scriptUrl; }
+
+// ── Google Sheets API ──────────────────────────────────────────────────────
+async function loadFromSheets() {
+  if (!scriptUrl) { renderList(); return; }
+  showStatus('Загружаем данные...', 'loading');
+  try {
+    const res = await fetch(scriptUrl + '?action=getAll');
+    const data = await res.json();
+    if (data.records) {
+      records = data.records;
+      localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+    }
+    hideStatus();
+    renderList();
+  } catch(e) {
+    // fallback to cache
+    const cache = localStorage.getItem('pbo_records_cache');
+    if (cache) records = JSON.parse(cache);
+    hideStatus();
+    renderList();
+    showStatus('Нет соединения — показываем кэш', 'err');
+    setTimeout(hideStatus, 3000);
+  }
+}
+
+async function saveToSheets(record) {
+  if (!scriptUrl) {
+    // local only
+    localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+    return true;
+  }
+  try {
+    const res = await fetch(scriptUrl + '?action=save', {
+      method: 'POST',
+      body: JSON.stringify(record)
+    });
+    const data = await res.json();
+    localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+    return data.ok;
+  } catch(e) {
+    localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+    return false;
+  }
+}
+
+async function deleteFromSheets(id) {
+  if (!scriptUrl) {
+    localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+    return;
+  }
+  try {
+    await fetch(scriptUrl + '?action=delete&id=' + id, { method: 'POST' });
+    localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+  } catch(e) {
+    localStorage.setItem('pbo_records_cache', JSON.stringify(records));
+  }
+}
+
+// ── List ───────────────────────────────────────────────────────────────────
+function renderList() {
+  const el = document.getElementById('list-content');
+  if (!records.length) {
+    el.innerHTML = `<div class="empty-state">
+      <h2>Оценок пока нет</h2>
+      <p>Нажми «+ Новая оценка» чтобы начать</p>
+      ${!scriptUrl ? '<p style="font-size:12px;color:var(--text-hint)">Google Sheets не подключён — данные сохраняются локально</p>' : ''}
+    </div>`;
+    return;
+  }
+  const sorted = [...records].sort((a,b) => new Date(b.date) - new Date(a.date));
+  el.innerHTML = `<div class="manager-grid">${sorted.map(r => {
+    const avg = calcAvg(r.scores);
+    const vLabel = {remove:'Убираем', develop:'Развиваем', support:'Поддерживающее обучение'}[r.verdict] || 'Не выбрано';
+    const vClass = r.verdict ? 'badge-' + r.verdict : 'badge-draft';
+    return `<div class="manager-card" onclick="showDetail('${r.id}')">
+      <div>
+        <div class="mc-name">${r.name || 'Без имени'}</div>
+        <div class="mc-meta">${ROLES[r.role]?.label || r.role} · ${r.concept || '—'} · ${r.address || '—'}</div>
+        <div class="mc-meta" style="margin-top:2px">Стаж: ${r.tenure || '—'} · ${formatDate(r.date)}</div>
+      </div>
+      <div class="mc-right">
+        <span class="badge ${vClass}">${vLabel}</span>
+        ${avg !== null ? `<span class="avg-pill">${avg.toFixed(1)} ср. балл</span>` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ── Form ───────────────────────────────────────────────────────────────────
+function startNew() {
+  currentId = null;
+  currentVerdict = null;
+  clearScores();
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-role').value = 'cs';
+  document.getElementById('f-concept').value = '';
+  document.getElementById('f-address').value = '';
+  document.getElementById('f-tenure').value = '';
+  document.getElementById('f-date').valueAsDate = new Date();
+  document.getElementById('f-strengths').value = '';
+  document.getElementById('f-gaps').value = '';
+  document.getElementById('f-context').value = '';
+  document.getElementById('form-breadcrumb-title').textContent = 'Новая оценка';
+  updateVerdictBtns();
+  renderScoreBlocks();
+  showPage('form');
+}
+
+function editRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  currentId = id;
+  currentVerdict = r.verdict || null;
+  currentScores = {...(r.scores || {})};
+  document.getElementById('f-name').value = r.name || '';
+  document.getElementById('f-role').value = r.role || 'cs';
+  document.getElementById('f-concept').value = r.concept || '';
+  document.getElementById('f-address').value = r.address || '';
+  document.getElementById('f-tenure').value = r.tenure || '';
+  document.getElementById('f-date').value = r.date || '';
+  document.getElementById('f-strengths').value = r.strengths || '';
+  document.getElementById('f-gaps').value = r.gaps || '';
+  document.getElementById('f-context').value = r.context || '';
+  document.getElementById('form-breadcrumb-title').textContent = r.name || 'Редактировать';
+  updateVerdictBtns();
+  renderScoreBlocks();
+  showPage('form');
+}
+
+function clearScores() { currentScores = {}; }
+
+function renderScoreBlocks() {
+  const role = document.getElementById('f-role').value;
+  const blocks = ROLES[role]?.blocks || [];
+  const container = document.getElementById('score-blocks');
+  container.innerHTML = blocks.map((b, i) => {
+    const key = 'b' + i;
+    const cur = currentScores[key];
+    const qHtml = b.qs.map(q => `
+      <div class="q-item">
+        <div class="q-tag">${q.tag}</div>
+        <div class="q-text">${q.q}</div>
+        <div class="q-ok">✓ ${q.ok}</div>
+        <div class="q-bad">✗ ${q.bad}</div>
+      </div>`).join('');
+    return `<div class="score-block">
+      <div class="score-header">
+        <div>
+          <div class="score-block-title">${b.title}</div>
+          <div class="q-accordion">
+            <button class="q-toggle" onclick="toggleQ(${i})">Показать вопросы</button>
+            <div class="q-list" id="ql-${i}">${qHtml}</div>
+          </div>
+        </div>
+        <div class="score-btns">
+          ${[0,1,2,3,4].map(s => `<button class="score-btn ${cur===s?'sel-'+s:''}" onclick="setScore('${key}',${s})">${s}</button>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  updateAvg();
+}
+
+function toggleQ(i) {
+  const el = document.getElementById('ql-' + i);
+  const btn = el.previousElementSibling;
+  const open = el.classList.toggle('open');
+  btn.textContent = open ? 'Скрыть вопросы' : 'Показать вопросы';
+}
+
+function setScore(key, val) {
+  currentScores[key] = val;
+  renderScoreBlocks();
+}
+
+function updateAvg() {
+  const vals = Object.values(currentScores).filter(v => v !== undefined);
+  const row = document.getElementById('avg-row');
+  if (!vals.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  const avg = vals.reduce((a,b) => a+b, 0) / vals.length;
+  document.getElementById('avg-num').textContent = avg.toFixed(1);
+  const rec = avg >= 3.5 ? 'Поддерживающее обучение' : avg >= 2.5 ? 'Развиваем точечно' : avg >= 1.5 ? 'Развиваем' : 'Убираем';
+  document.getElementById('avg-rec').textContent = rec;
+}
+
+function calcAvg(scores) {
+  if (!scores) return null;
+  const vals = Object.values(scores).filter(v => v !== undefined && v !== null);
+  if (!vals.length) return null;
+  return vals.reduce((a,b) => a+b, 0) / vals.length;
+}
+
+function setVerdict(v) {
+  currentVerdict = currentVerdict === v ? null : v;
+  updateVerdictBtns();
+}
+
+function updateVerdictBtns() {
+  ['remove','develop','support'].forEach(v => {
+    const btn = document.getElementById('vb-' + v);
+    btn.className = 'verdict-btn' + (currentVerdict === v ? ' sel-' + v : '');
+  });
+}
+
+async function saveRecord() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showStatus('Введите ФИО сотрудника', 'err'); setTimeout(hideStatus, 2500); return; }
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Сохраняем...';
+  const record = {
+    id: currentId || Date.now().toString(),
+    name,
+    role: document.getElementById('f-role').value,
+    concept: document.getElementById('f-concept').value.trim(),
+    address: document.getElementById('f-address').value.trim(),
+    tenure: document.getElementById('f-tenure').value.trim(),
+    date: document.getElementById('f-date').value,
+    scores: {...currentScores},
+    strengths: document.getElementById('f-strengths').value.trim(),
+    gaps: document.getElementById('f-gaps').value.trim(),
+    context: document.getElementById('f-context').value.trim(),
+    verdict: currentVerdict,
+    updatedAt: new Date().toISOString()
+  };
+  if (currentId) {
+    const idx = records.findIndex(r => r.id === currentId);
+    if (idx >= 0) records[idx] = record; else records.push(record);
+  } else {
+    records.push(record);
+  }
+  const ok = await saveToSheets(record);
+  btn.disabled = false;
+  btn.textContent = 'Сохранить оценку';
+  if (ok !== false) {
+    showStatus('Сохранено ✓', 'ok');
+    setTimeout(hideStatus, 2000);
+    goList();
+  } else {
+    showStatus('Сохранено локально (нет соединения с таблицей)', 'err');
+    setTimeout(hideStatus, 3000);
+    goList();
+  }
+}
+
+// ── Detail ─────────────────────────────────────────────────────────────────
+function showDetail(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  const role = ROLES[r.role] || {};
+  const blocks = role.blocks || [];
+  const avg = calcAvg(r.scores);
+  const vLabel = {remove:'Убираем', develop:'Развиваем', support:'Поддерживающее обучение'}[r.verdict] || 'Не выбрано';
+  const vClass = r.verdict ? 'badge-' + r.verdict : 'badge-draft';
+  document.getElementById('detail-breadcrumb').textContent = r.name || '—';
+  const scoresHtml = blocks.map((b, i) => {
+    const s = r.scores?.['b'+i];
+    const cl = s !== undefined ? 'sd-'+s : 'sd-na';
+    return `<div class="detail-score-row"><span>${b.title}</span><div class="score-dot ${cl}">${s !== undefined ? s : '—'}</div></div>`;
+  }).join('');
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="detail-name">${r.name}</div>
+          <div class="detail-meta">${role.label || r.role} · ${r.concept || '—'} · ${r.address || '—'}</div>
+          <div class="detail-meta">Стаж: ${r.tenure || '—'} · Оценка: ${formatDate(r.date)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="badge ${vClass}">${vLabel}</span>
+          ${avg !== null ? `<span style="font-size:20px;font-weight:700">${avg.toFixed(1)}</span>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-card-label">Баллы по блокам</div>
+        ${scoresHtml || '<div style="color:var(--text-muted);font-size:13px">Не заполнено</div>'}
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-label">Сильные стороны</div>
+        <div style="font-size:14px;color:var(--text);white-space:pre-wrap">${r.strengths || '—'}</div>
+        <div class="detail-card-label" style="margin-top:16px">Зоны развития</div>
+        <div style="font-size:14px;color:var(--text);white-space:pre-wrap">${r.gaps || '—'}</div>
+      </div>
+    </div>
+    ${r.context ? `<div class="detail-card" style="margin-bottom:16px"><div class="detail-card-label">Контекст и наблюдения</div><div style="font-size:14px;white-space:pre-wrap">${r.context}</div></div>` : ''}
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="editRecord('${r.id}')">Редактировать</button>
+      <button class="btn btn-danger" onclick="confirmDelete('${r.id}')">Удалить</button>
+    </div>`;
+  showPage('detail');
+}
+
+function confirmDelete(id) {
+  const r = records.find(x => x.id === id);
+  if (!confirm(`Удалить оценку «${r?.name}»?`)) return;
+  records = records.filter(x => x.id !== id);
+  deleteFromSheets(id);
+  goList();
+}
+
+// ── Setup ──────────────────────────────────────────────────────────────────
+function saveSetup() {
+  scriptUrl = document.getElementById('setup-url').value.trim();
+  localStorage.setItem('pbo_script_url', scriptUrl);
+  document.getElementById('setup-result').innerHTML = '<span style="color:var(--green)">✓ URL сохранён. Загружаем данные...</span>';
+  loadFromSheets();
+}
+
+async function testConnection() {
+  const url = document.getElementById('setup-url').value.trim();
+  if (!url) { document.getElementById('setup-result').innerHTML = '<span style="color:var(--red)">Введите URL</span>'; return; }
+  document.getElementById('setup-result').innerHTML = 'Проверяем...';
+  try {
+    const res = await fetch(url + '?action=ping');
+    const data = await res.json();
+    if (data.ok) document.getElementById('setup-result').innerHTML = '<span style="color:var(--green)">✓ Соединение установлено</span>';
+    else document.getElementById('setup-result').innerHTML = '<span style="color:var(--red)">Ошибка ответа от скрипта</span>';
+  } catch(e) {
+    document.getElementById('setup-result').innerHTML = '<span style="color:var(--red)">Не удалось подключиться. Проверьте URL и права доступа.</span>';
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function formatDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'}); } catch(e) { return d; }
+}
+function showStatus(msg, type) {
+  const el = document.getElementById('status-bar');
+  el.textContent = msg;
+  el.className = 'status-bar show ' + type;
+}
+function hideStatus() {
+  document.getElementById('status-bar').className = 'status-bar';
+}
+</script>
+</body>
+</html>
